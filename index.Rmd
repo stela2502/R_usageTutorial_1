@@ -1,0 +1,61 @@
+---
+title: "Test12"
+author: "Stefan Lang"
+date: "12/10/2018"
+output: rmarkdown::github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+This course is targeted at complete R beginners, but you will not be able to learn anything without training.
+After this course you will know basic concepts in R and will be able to work with data tables.
+But you will forget that soon if you do not use this knowledge at least once a week for about one year (wild guess).
+
+So please dig into your own data as soon as possible. Not during the course though ;-)
+ 
+
+# Basic data structures
+
+R is a programming language. Therefore you need to store data in data structures that R can understand.
+And as data structures are an extremely boring thing without an example we might as well start getting an example dataset.
+Having completed the Unix course you should know what you are doing here. Start a Terminal and do this:
+
+```
+if [ ! -d ~/NAS/git ]; then
+   mkdir ~/NAS/git
+fi
+cd ~/NAS/git
+git clone http://gitlab/stefanlang/R_usageTutorial_1.git
+cd R_usageTutorial_1
+R
+```
+
+Now you have a working R console. You can copy from this document that you also find in the R_usageTutorial_1/index.html using mouse select and middle mouse button insert.
+
+You hopefully still remember the examples from the Unix course? Gtf files?
+Lets load one of them 
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+

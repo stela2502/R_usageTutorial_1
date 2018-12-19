@@ -360,7 +360,7 @@ getGtfInfo( chr4_10000002_19000002, 'gene_id' )
 
 ## What you learned
 
-- Load an external package (stringr) and use function that are defined in that package.
+- Load an external package (stringr) and use functions that are defined in that package.
 - Create R functions
 - Iterate over tables
 - Extract strings based on a regular expression

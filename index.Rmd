@@ -1,7 +1,5 @@
 ---
-title: "Test12"
-author: "Stefan Lang"
-date: "12/10/2018"
+title: "Basic R Course SCC 2019"
 output: rmarkdown::github_document
 ---
 
@@ -11,11 +9,17 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Introduction
 
-This course is targeted at complete R beginners, but you will not be able to learn anything without training.
+This course is targeted at complete R beginners.
+
+It will cover basic R data structures like vector, list, factor and data.frame, 
+explain the usage of external libraries and teach how to write simple function in R.
+In addition a first step into the R plotting system will be taken.
+
+You will not be able to learn anything without training.
 After this course you will know basic concepts in R and will be able to work with data tables.
 But you will forget that soon if you do not use this knowledge at least once a week for about one year (wild guess).
 
-So please dig into your own data as soon as possible. Not during the course though ;-)
+So please dig into your own data as soon as possible. But not during the course!
  
 
 # Basic data structures
@@ -23,6 +27,9 @@ So please dig into your own data as soon as possible. Not during the course thou
 R is a programming language. Therefore you need to store data in data structures that R can understand.
 And as data structures are an extremely boring thing without an example we might as well start getting an example dataset.
 Having completed the Unix course you should know what you are doing here. Start a Terminal and do this:
+
+You all have taken the Unix course before and therefore this should look
+familiar. Do you remember where you need to paste that in?
 
 ```
 if [ ! -d ~/NAS/git ]; then
@@ -37,25 +44,323 @@ R
 Now you have a working R console. You can copy from this document that you also find in the R_usageTutorial_1/index.html using mouse select and middle mouse button insert.
 
 You hopefully still remember the examples from the Unix course? Gtf files?
-Lets load one of them 
+Lets load one restricted to only ENSEMBL gene entries:
 
-## R Markdown
+```{r }
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+genes <- read.delim( 'data/ENSEMBL_genes.gtf', header=F)
+head(genes)
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
 ```
 
-## Including Plots
+OK - great! Learning about data types here - what did we get?
 
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+class(genes)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+We will ignore most of the data.frame here, just one thing: You can get subsets
+of a table object (matrix, data.farme and others) by writing
+object_name[ rowID, colID] e.g genes[,1] to get the first column,
+genes[1:10,1] to get the first 10 values from column 1 and so on.
+
+## Vector
+
+We read an object of class 'data.frame'. But I wanted to start with vectors. So
+lets get a [vector](http://www.r-tutor.com/r-introduction/vector) of start
+positions from this data.frame object.
+
+```{r}
+vect = as.vector(genes[,4])
+length(vect)
+```
+
+To be on the save side I have told R to take the 4th column of the
+data.table genes and convert it to a vector. I have saved the resulting vector
+with 13139 gene start positions into the variable 'vect'. 
+And we could create a histogram of all start positions:
+
+```{r}
+hist(vect, breaks=100)
+```
+
+We now created a histogram of the start positions of all genes on all 
+chromosomes. But this is misleading as we have the start positions of all
+genes in the genome relative to the chromosome. If we would like to visualize
+the start positions relative to the chromosomes we would need to split the start
+position into separate vectors for each chromosome.
+
+
+## List
+
+We need to store the start positions of a unknown amount of genes per chromosome,
+preferably in one object and not a long list of separate objects. I recommend to
+put all chromosome specific gene start positions into a new [R
+list object](http://www.r-tutor.com/r-introduction/list). A list in R can
+contain objects of any class and any size. Here we need to store the per chromosome
+start positions in the list. And there is a function to create this list in R:
+split().
+
+
+```{r}
+#get info about how to use the function split:
+?split
+
+per_chr <- split( vect, as.vector( genes[,1]))
+class(per_chr)
+names(per_chr)
+
+lapply( per_chr, length)
+```
+
+The function lapply does apply a R function (length) onto a R list (per_chr)
+and you see the result.
+
+Now we can produce a histogram of all genes from chr1.
+
+```{r}
+hist( per_chr[['chr1']], breaks=100)
+```
+
+Here you learned about R lists and the functions split() and lapply(). 
+
+## Factor
+
+Factors are a huge source for problems in R. I have spend hours to look for
+errors in my scripts that ultimately boiled down that I was using a factor instead of a vector of
+strings. Therefore I want to go into details about factors:
+
+Factors store a vector of integers (ids) and a string level for these. This level is
+what defines the ids on and if you use a factor in a numeric context
+the strings get replaced by the numeric position id of the string in the levels.
+
+An example where you would probably expect a different order:
+
+```{r}
+newFactor <- factor( c('B','C','D','A','A','A','B'))
+table(newFactor)
+```
+
+The newFactor is sorted in a lexical order, not in the order of appearance in
+the vector. That is sometimes good sometimes not what you expect.
+You can also force an order into a factor:
+
+```{r}
+states = factor( c('LT-HSC', 'ST-HSC', 'Early MPP', 'Late MPP') )
+sort(states)
+## Not what you want?
+states = factor( c('LT-HSC', 'ST-HSC', 'Early MPP', 'Late MPP'), levels= c('LT-HSC', 'ST-HSC', 'Early MPP', 'Late MPP'))
+sort(states)
+```
+
+But adding something new to a factor is complicated - I normally re-create them.
+
+```{r}
+states[5] = 'LT-HSC'
+## All OK ?
+states
+
+states[5] = 'CLP'
+states
+```
+
+The fifth element is 'NA' instead of 'CLP'. To add the 'CLP' into your factor
+you need to re-create it:
+
+```{r}
+states = factor( c('LT-HSC', 'ST-HSC', 'Early MPP', 'Late MPP', 'CLP') , levels=c('LT-HSC', 'ST-HSC', 'Early MPP', 'Late MPP', 'CLP') )
+states
+```
+
+### Where do you find factors in real live?
+
+The chromosome information in the genes data.frame is a factor. Try to re-order
+it.
+
+Better break that up into more steps:
+
+```{r}
+## get the old factor as vector
+Strings = as.vector(genes[,1])
+old_levels = levels(genes[,1])
+old_levels
+## for the lacy ones
+paste ( old_levels, collapse="', '" )
+```
+
+You the can simply copy the old order into your script using copy paste:
+
+```{r}
+reordered = c( 'chr1', 'chr10', 'chr11', 'chr12', 'chr13', 'chr14', 'chr15', 'chr16', 
+		'chr17', 'chr18', 'chr19', 'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 
+		'chr8', 'chr9', 'chrM', 'chrX', 'chrY')
+# manual reorder this in your script file
+reordered = c( 'chr1', 'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 
+		'chr8', 'chr9','chr10', 'chr11', 'chr12', 'chr13', 'chr14', 'chr15', 'chr16', 
+		'chr17', 'chr18', 'chr19', 'chrX', 'chrY',  'chrM')
+## now we can re-create the factor in the table:
+genes[,1] <- factor(Strings, levels= reordered )
+
+table(genes[,1])
+
+```
+
+And this new order would also be used in the split call we used previously:
+
+```{r}
+per_chr <- split( vect, genes[,1] )
+class(per_chr)
+names(per_chr)
+```
+
+### What you learned
+
+Factors in R are more rigid objects that vectors; you can not just add a new entry into a factor as it will get the 'NA' value. Instead I recommend to re-create a factor if you add a new element.
+
+# R functions
+
+R function are quite simple; you can store a function into a object as you can store a vector into a object:
+
+```{r}
+vect <- c(1,3,4,5,7)
+funct <- function(x) { x * 100 }
+funct(vect)
+```
+
+A R function will always return what is written in the last line of the function definition.
+
+## Example 1: get genes in chromosomal area
+
+Lets re-do the Unix course example: Get all genes in the chromosomal area chr4:10000002-19000002.
+
+I do recommend, that you NEVER use a object inside a function that you do not get as a function option (function("This part here")).
+Using objects defined outside the function can lead to unexpected results if you change the outside object and then re-run the function.
+
+```{r}
+getGenes <- function( tab, chr, start, end ) {
+
+}
+```
+
+**Can you fill the logics?**
+Hint: you need a 'for loop' to process the tab object row by row, 
+and I recommend to just obtain the row ids that match in the first step.
+It is easier to return a subset of the table using the tab[ids,] method in the end of the function. 
+
+<button class="btn btn-primary" data-toggle="collapse" data-target="#BlockName"> Show the solution </button>  
+<div id="BlockName" class="collapse">  
+
+```{r}
+getGenes <- function( tab, chr, start, end ) {
+	ids = NULL
+	for (id in 1:nrow(tab) ) {
+		if ( tab[id,1] == chr && tab[id,3] == 'gene' && tab[id,4] < end && tab[id,5] > start ) {
+			ids <- c( ids, id)
+		}
+	}
+	if ( length(ids) > 0 ){
+		tab[ids,]
+	}else { 
+		NULL
+	}
+}
+
+chr4_10000002_19000002 <- getGenes( genes, 'chr4', 10000002, 19000002 )
+```
+
+</div>
+
+
+## Example 2: extract specific information from the 9th column
+
+A lot of the gtf information is merged into the 9th column of the gtf file. It would be good to get a function that is extracting any information out of that column.
+
+For this function you need a string handling R package that is not loaded by default: stringr.
+
+Load this package into your R session like this:
+
+```{r}
+library(stringr)
+```
+
+The important function here is [str_extract](https://stringr.tidyverse.org/articles/regular-expressions.html) and especially the regular expression part.
+We will have strings like 
+```
+"gene_id ENSMUSG00000088333.2; transcript_id ENSMUSG00000088333.2; gene_type snRNA; gene_status KNOWN; gene_name Gm27396; transcript_type snRNA; transcript_status KNOWN; transcript_name Gm27396; level 3;"
+```
+where we need to extract e.g. the  "gene_name Gm27396" or even better the 'Gm27396' part.
+
+The easiest and least problematic is to first str_extract the whole entry "gene_name Gm27396", str_split that based on whitespace and return the second entry.
+
+<button class="btn btn-primary" data-toggle="collapse" data-target="#BlockName2"> Show the solution </button>  
+<div id="BlockName2" class="collapse">  
+
+```{r}
+whole_entry = str_extract( genes[1,9], "gene_name \\w*" )
+whole_entry
+split =str_split(whole_entry, "\\s+" )
+class(split)
+split[[1]][2]
+## or in one line
+str_split(str_extract( genes[1,9], "gene_name \\w*") , "\\s+" )[[1]][2]
+## And what if the string does not contain the information
+str_split(str_extract( "Not including the information" , "gene_name \\w*") , "\\s+" )[[1]][2]
+
+```
+
+</div>
+
+I am deeply impressed if you managed to extract the information from the string by just googling and without the help.
+
+Now we know how to extract this information from one string. But we want to do this for all rows in the genes table.
+And we of cause do not only want to extract 'gene_name' but also any of the other information tags.
+
+The function would look like that, just that this one is full of errors:
+
+```{r}
+getGtfInfo = function( tab, info='gene_name' ) {
+	info = vector( 'character', nrow(tab) )
+	for (id in 1:now(tab) ) {
+		info[id] = str_split(str_extract( genes[1,9], "gene_name \\w*") , "\\s+" )[[1]][2]
+	}
+	info
+}
+```
+
+Please correct the errors! Hint - info is not used at all and do we really want to use genes[1,9]?
+
+Test your function using the chr4_10000002_19000002 from the last section. Can you select the 'gene_id' elements?
+
+<button class="btn btn-primary" data-toggle="collapse" data-target="#BlockName3"> Show the solution </button>  
+<div id="BlockName3" class="collapse">  
+
+```{r}
+
+getGtfInfo = function( tab, info='gene_name' ) {
+	ret = vector( 'character', nrow(tab) ) ## info is already used!
+	for (id in 1:nrow(tab) ) {
+		ret[id] = str_split(str_extract( tab[id,9], paste( info,"[\\w-]*") ) , "\\s+" )[[1]][2]
+		## genes[1,9] is (1) an outside object and (2) not iterated over using id
+		## and we need to include - in the [\\w-] regexp - see row 8
+	}
+	ret
+}
+
+getGtfInfo( chr4_10000002_19000002, 'gene_name' )
+
+getGtfInfo( chr4_10000002_19000002, 'gene_id' )
+
+```
+
+</div>
+
+
+## What you learned
+
+- Load an external package (stringr) and use function that are defined in that package.
+- Create R functions
+- Iterate over tables
+- Extract strings based on a regular expression
+
+# Creating data plots
 

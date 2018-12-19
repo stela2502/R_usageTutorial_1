@@ -45,6 +45,7 @@ Now you have a working R console. You can copy from this document that you also 
 
 You hopefully still remember the examples from the Unix course? Gtf files?
 Lets load one restricted to only ENSEMBL gene entries:
+<<<<<<< HEAD
 
 ```{r }
 
@@ -174,6 +175,8 @@ states
 
 ### Where do you find factors in real live?
 
+
+
 The chromosome information in the genes data.frame is a factor. Try to re-order
 it.
 
@@ -194,7 +197,7 @@ You the can simply copy the old order into your script using copy paste:
 reordered = c( 'chr1', 'chr10', 'chr11', 'chr12', 'chr13', 'chr14', 'chr15', 'chr16', 
 		'chr17', 'chr18', 'chr19', 'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 
 		'chr8', 'chr9', 'chrM', 'chrX', 'chrY')
-# manual reorder this in your script file
+
 reordered = c( 'chr1', 'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 
 		'chr8', 'chr9','chr10', 'chr11', 'chr12', 'chr13', 'chr14', 'chr15', 'chr16', 
 		'chr17', 'chr18', 'chr19', 'chrX', 'chrY',  'chrM')
@@ -363,4 +366,5 @@ getGtfInfo( chr4_10000002_19000002, 'gene_id' )
 - Extract strings based on a regular expression
 
 # Creating data plots
+
 

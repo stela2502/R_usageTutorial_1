@@ -24,6 +24,9 @@ R is a programming language. Therefore you need to store data in data structures
 And as data structures are an extremely boring thing without an example we might as well start getting an example dataset.
 Having completed the Unix course you should know what you are doing here. Start a Terminal and do this:
 
+You all have taken the Unix course before and therefore this should look
+familiar. Do you remember where you need to paste that in?
+
 ```
 if [ ! -d ~/NAS/git ]; then
    mkdir ~/NAS/git
@@ -37,7 +40,152 @@ R
 Now you have a working R console. You can copy from this document that you also find in the R_usageTutorial_1/index.html using mouse select and middle mouse button insert.
 
 You hopefully still remember the examples from the Unix course? Gtf files?
-Lets load one of them 
+Lets load one restricted to only ENSEMBL gene entries:
+
+```{r }
+
+genes <- read.delim( 'data/ENSEMBL_genes.gtf', header=F)
+head(genes)
+
+```
+
+OK - great! Learning about data types here - what did we get?
+
+```{r}
+class(genes)
+```
+
+We will ignore most of the data.frame here, just one thing: You can get subsets
+of a table object (matrix, data.farme and others) by writing
+object_name[ rowID, colID] e.g genes[,1] to get the first column,
+genes[1:10,1] to get the first 10 values from column 1 and so on.
+
+## Vector
+
+We read an object of class 'data.frame'. But I wanted to start with vectors. So
+lets get a [vector](http://www.r-tutor.com/r-introduction/vector) of start
+positions from this data.frame object.
+
+```{r}
+vect = as.vector(genes[,4])
+length(vect)
+```
+
+To be on the save side I have told R to take the 4th column of the
+data.table genes and convert it to a vector. I have saved the resulting vector
+with 13139 gene start positions into the variable 'vect'. 
+And we could create a histogram of all start positions:
+
+```{r}
+hist(vect, breaks=100)
+```
+
+We nbow created a histogram of the start positions of all genes on all 
+chromosomes. But this is missleading as we have the start positions of all
+genes in the genome relative to the chromosome. If we would like to visualize
+the start positions relative to the chromosomes we would need to split the start
+position into separate vectors for each chromosome.
+
+
+## List
+
+We need to store the start positions of a unknown genes per chromosome,
+preferably in one object and not a long list of separate objects. I recommend to
+put all chromosome specific gene start positions into a new [R
+list object](http://www.r-tutor.com/r-introduction/list). A list in R can
+contain objects of any class and size. Here we need to store the per chromosome
+start positions in the list. And there is a function to create this list in R:
+split().
+
+
+```{r}
+?split
+
+per_chr <- split( vect, as.vector( genes[,1]))
+class(per_chr)
+names(per_chr)
+
+lapply( per_chr, length)
+```
+
+The function lapply does apply a R function (length) onto a R list (per_chr)
+and you see the result.
+
+Now we can produce a histogram of all genes from chr1.
+
+```{r}
+hist( per_chr[['chr1']], breaks=100)
+```
+
+## Factor
+
+Factors are a huge source for problems in R. I have spend hours to look for
+errors in my scripts that bioled down to using an factor instead of a vector of
+strings.
+
+Factors store a vector of integers and a string level for these. This level is
+what it does sort the vector on and if you use a factor in a numericx context
+the strings get replaced by the numeric id of the string in the levels.
+
+An example where you would probably expect a different order:
+
+```{r}
+newFactor <- factor( c('B','C','D','A','A','A','B'))
+table(newFactor)
+```
+
+The newFactor is sorted in a lexial order, not in the order of appearance in
+the vector. That is sometimes good sometimes not what you expect.
+You can also force an order into a factor:
+
+```{r}
+states = factor( c('LT-HSC', 'ST-HSC', 'Early MPP', 'Late MPP') )
+sort(states)
+## Not what you want?
+states = factor( c('LT-HSC', 'ST-HSC', 'Early MPP', 'Late MPP'), levels= c('LT-HSC', 'ST-HSC', 'Early MPP', 'Late MPP'))
+sort(states)
+```
+
+But adding something new to a factor is complicated - I normally re-create them.
+
+```{r}
+states[5] = 'CLP'
+states
+```
+
+The fifth element is 'NA' instead of 'CLP'. To add the 'CLP' into your factor
+you need to re-create it:
+
+```{r}
+states = factor( c(as.vector(states), 'CLP') , levels=c('LT-HSC', 'ST-HSC', 'Early MPP', 'Late MPP', 'CLP') )
+states
+```
+
+The chromosome information in the genes data.frame is a factor. Try to re-order
+it.
+
+Better break that up into more steps:
+
+```{r}
+## get the old factor as vector
+Strings = as.vector(genes[,1])
+old_levels = levels(genes[,1])
+old_levels
+## for the lacy ones
+paste ( old_levels, collapse="', '" )
+reordered = c( 'chr1', 'chr10', 'chr11', 'chr12', 'chr13', 'chr14', 'chr15', 'chr16', 
+		'chr17', 'chr18', 'chr19', 'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 
+		'chr8', 'chr9', 'chrM', 'chrX', 'chrY')
+
+reordered = c( 'chr1', 'chr2', 'chr3', 'chr4', 'chr5', 'chr6', 'chr7', 
+		'chr8', 'chr9','chr10', 'chr11', 'chr12', 'chr13', 'chr14', 'chr15', 'chr16', 
+		'chr17', 'chr18', 'chr19', 'chrX', 'chrY',  'chrM')
+## now we can re-create the factor in the table:
+genes[,1] <- factor(Strings, levels= reordered )
+
+table(genes[,1])
+
+```
 
 ## R Markdown
 

@@ -7,6 +7,9 @@ output: rmarkdown::github_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+<link rel="stylesheet" type="text/css" media="all" href="./styles.css" />
+
+
 # Introduction
 
 This course is targeted at complete R beginners.
@@ -45,7 +48,6 @@ Now you have a working R console. You can copy from this document that you also 
 
 You hopefully still remember the examples from the Unix course? Gtf files?
 Lets load one restricted to only ENSEMBL gene entries:
-<<<<<<< HEAD
 
 ```{r }
 
@@ -105,7 +107,7 @@ split().
 
 ```{r}
 #get info about how to use the function split:
-?split
+#?split
 
 per_chr <- split( vect, as.vector( genes[,1]))
 class(per_chr)
@@ -365,6 +367,289 @@ getGtfInfo( chr4_10000002_19000002, 'gene_id' )
 - Iterate over tables
 - Extract strings based on a regular expression
 
+
+
 # Creating data plots
+
+You have already seen the most straight forward R plotting using the hist() function earlier.
+And for a start this type of plot (vs. ggplot2 or plotly) is the one I prefere for this tutorial.
+
+I am using about 3-5 types of plots: [normal xy](https://www.statmethods.net/graphs/scatterplot.html) 
+which are so simple you can read up on them yourself, [more intersting boxplots](https://www.statmethods.net/graphs/boxplot.html), 
+[violin plots](https://www.r-graph-gallery.com/violin-plot/) and the most important heatmaps.
+
+There are many ways to produce heatmaps in R. I want to focus on heatmap3 which is not the most fany one any more, 
+but is still working fine for my needs. 
+
+
+But first lets get a dataset we can plot from. I have choosen from a recent publication 
+[Differences in Cell Cycle Status Underlie Transcriptional Heterogeneity in the HSC Compartment](./data/GSE108155-main.pdf) - mainly due to personal interest.
+I have downloaded the data and put it into the git data folder. 
+
+```{r}
+dat <- read.delim('data/GSE108155_Bulk_limma.csv', sep="\t")
+
+## some of the gene names are not unique - just paste a _1 _2 ... _n to all additional ones
+forceAbsoluteUniqueSample = function( x ,separator='_') {
+ last = ''
+ ret <- vector(length=length(x))
+ for ( i in 1:length(x) ){
+ 	if ( is.null(ret) ){
+ 		last = x[i]
+ 		ret[i] <- last
+ 	}
+ 	else{
+ 		last = x[i]
+ 		if ( ! is.na(match( last, ret )) ){
+ 			last <- paste(last,separator,sum( ! is.na(match( x[1:i], last )))-1, sep = '')
+ 		}
+ 		ret[i] <- last
+ 	}
+ }
+ ret
+}
+
+expr <- dat[,1:12]
+rownames(expr) <- forceAbsoluteUniqueSample(as.character(dat[,'ID']))
+
+GOI <- as.vector(dat[order( dat[,'adj.P.Val_high_vs_int'][1:20] ),'ID'])
+
+m = match( GOI, rownames(expr))
+
+## Did we misspell a gene?
+GOI[which(is.na(m))] # this should always be tried!
+
+forPlot <- expr[m,]
+dim(forPlot)
+
+```
+
+## Heatmap using heatmap.3
+
+Heatmap.3 is a special heatmap function that allows row and cloumn color bars and many other features.
+If you enver got a heatmap from me it has been produced using this function.
+
+```{r}
+source( 'data/heatmap.3.R' )
+
+heatmap.3( as.matrix(forPlot), ColSideColors=NULL, RowSideColors=NULL  ) 
+```
+
+But can we get the bluered colors into the plot?
+
+```{r}
+library(gplots)
+
+heatmap.3( as.matrix(forPlot), ColSideColors=NULL, RowSideColors=NULL, col= bluered ) 
+```
+
+You can play with the colors using any color function e.g. rainbow, greenred, redgreen or simply colorpanel.
+
+```{r}
+heatmap.3( as.matrix(forPlot), ColSideColors=NULL, RowSideColors=NULL, col= rainbow )
+
+heatmap.3( as.matrix(forPlot), ColSideColors=NULL, RowSideColors=NULL, col=  greenred)
+
+heatmap.3( as.matrix(forPlot), ColSideColors=NULL, RowSideColors=NULL, col= function(x) { colorpanel( x,'green', 'gray',  'red')})
+
+ 
+```
+
+The complete documenation of the heatmap3 function can be found [here](https://www.rdocumentation.org/packages/heatmap3/versions/1.1.1/topics/heatmap3).
+It is actually a lot of fun to play with that.
+
+
+# Package it all up
+
+Say you work on a project that is requiring a lot of different functions that you wrote yourself.
+E.g. you want to combine genomic data with expression data or proteins. 
+Most of the functions might be more or less data set specific, but you can forsee, 
+that you would have a similar dataset in the close future.
+Or you simply want a method to separate your functions from the actual script you produce while you analyze a dataset.
+
+You could also just want to try to create an R package.
+
+To create that is really simple. Start a new Terminal and
+
+'''
+cd ~/NAS
+mkdir ProgrammingArea
+cd ProgrammingArea
+R
+```
+
+```{r}
+library(devtools)
+create_package('MyFancyFirstRpackage')
+```
+
+Now is the time to think about a programming environment you want to work with.
+RStudio might work for some - I become agressive using it.
+Emacs or vim are console programs that are already installed or very easy to install in any Linux/Unix environment.
+I started using vim, but it son became complicated to work in bigger projects.
+
+I ended up using [Eclipse](https://www.eclipse.org/) and the [StatET](http://www.walware.de/goto/statet) plugin.
+But we are starting it VERY basic and hence start with a simple text editor (NOT WORD!): pluma.
+
+## DESCRIPTION
+
+Open the 'Places' head menu and start an explorer window in your home folder. Navigate to your package folder and inspect the files you have created there.
+The most important file there is DESCRIPTION as it is the main description file for you new project.
+Try to fill in all your details. Or you could also keep it like that.
+
+In case we would like implement what we have done so far into a package we would depend on two other packages (already):
+stringr and gplots. We can add these packages into the DESCRIPTION and the packages would (1) be installed when we install our package and (2) loaded when we load our package.
+
+Add these lines to your DESCRIPTION file:
+
+```
+ Depends:
+    R (>= 3.3.2),
+    stringr,
+    gplots
+```
+
+## The class definition
+
+A package can be seen as a programming object. It really is not, but not important here.
+[Object oriented programming](https://en.wikipedia.org/wiki/Object-oriented_programming) (OO) is a philosophy in programming
+and something you should definitely follow if you want to start to program.
+
+Boiled down the OO phylosophy tells, that an object should contain all data and all function you need to access and manipulate the object data.
+Only R6 classes in R implement this philosophy, but they are not used to a great deal in Bioinformatics - yet.
+
+Most available Bioinformatic packages are coded in the R class system S4. So lets create a S4 class. 
+
+Create a file class.R in your R subfolder and fill it with this information:
+
+```
+#' @name MyFancyFirstRpackage
+#' @title MyFancyFirstRpackage
+#' @description  An S4 class to do what I want.
+#' @slot data a data.frame containing the data for each gene x sample (gene = row)
+#' @slot samples a data.frame describing the columnanmes in the data column
+#' @slot annotation a data.frame describing the rownames in the data rows
+#' @slot name the name for this package (all filesnames contain that)
+#' @slot other here a set of used and probably lateron important objects can be saved. Be very carful using any of them!
+#' @exportClass MyFancyFirstRpackage
+setClass(
+		Class='MyFancyFirstRpackage', 
+		representation = representation ( 
+				data='data.frame',
+				samples='data.frame',
+				annotation='data.frame',
+				name='character',
+				other = 'list'
+		),
+		prototype = list(
+				data=data.frame(),
+				samples=data.frame(),
+				annotation=data.frame(),
+				name='no_name',
+				other= list()
+		)
+)
+```
+
+Save this file and lets create the package:
+
+```{r}
+document()
+```
+
+That should not produce any errors. So lets create a first function, that creates one of these objects from a data.frame.
+
+## The first function
+
+It might not be the 'correct' way, but I like it if I can create my objects from simple data.frames.
+The easiest way to implement that is a as_MyObject function. I recommend to create one new .R file for every function.
+It will be easier for others and for yourself to find the function definition laster on.
+
+So please create a as_MyObject.R file in the R folder, open it and paste that in:
+
+```
+
+if ( ! isGeneric('as_MyObject') ){ setGeneric('as_MyObject', ## Name
+	function ( dat, ... ) { 
+		standardGeneric('as_MyObject') ## der Aufruf von standardGeneric sorgt für das_BioData Dispatching
+	}
+)
+}else {
+	print ("Onload warn generic function 'as_MyObject' already defined - no overloading here!")
+}
+
+#' @name as_MyObject
+#' @rdname as_MyObject-data.frame-methods
+#' @docType methods
+#' @description create a MyFancyFirstRpackage from a data.frame
+#' @param dat the data.frame
+#' @export 
+setMethod('as_MyObject', signature = c ('data.frame'),
+		definition = function ( dat ) {
+			snames <- colnames(dat)
+			samples = data.frame( SampleID= colnames(dat))
+			annotation= data.frame( GeneID = rownames(dat))
+			new('MyFancyFirstRpackage', dat, samples, annotation )
+		}
+)
+```
+
+Save The file and re-do the document() step. No errors I hope?
+So then we should try to populate the object with some real data - right?
+
+```{r}
+dat <- read.delim( '~/NAS/git/R_usageTutorial_1/data/GSE108155_Bulk_limma.csv', sep="\t")
+expr <- dat[,1:12]
+rownames(expr) <- forceAbsoluteUniqueSample(as.character(dat[,'ID']))
+```
+
+Ahh yes - this might be a good other function to save in the object - or?
+
+Create a file forceAbsoluteUniqueSample.R and add this into it:
+
+```
+if ( ! isGeneric('forceAbsoluteUniqueSample') ){ setGeneric('forceAbsoluteUniqueSample', ## Name
+	function ( x, ... ) { 
+		standardGeneric('forceAbsoluteUniqueSample') ## der Aufruf von standardGeneric sorgt für das_BioData Dispatching
+	}
+)
+}else {
+	print ("Onload warn generic function 'forceAbsoluteUniqueSample' already defined - no overloading here!")
+}
+
+#' @name forceAbsoluteUniqueSample
+#' @rdname MyFancyFirstRpackage-character-methods
+#' @docType methods
+#' @description create a MyFancyFirstRpackage from a data.frame
+#' @param x a character vector
+#' @param separator how to sparate the name from the index (default '_')
+#' @export 
+setMethod('forceAbsoluteUniqueSample', signature = c ('character'),
+		definition  = function( x ,separator='_') {
+ last = ''
+ ret <- vector(length=length(x))
+ for ( i in 1:length(x) ){
+ 	if ( is.null(ret) ){
+ 		last = x[i]
+ 		ret[i] <- last
+ 	}
+ 	else{
+ 		last = x[i]
+ 		if ( ! is.na(match( last, ret )) ){
+ 			last <- paste(last,separator,sum( ! is.na(match( x[1:i], last )))-1, sep = '')
+ 		}
+ 		ret[i] <- last
+ 	}
+ }
+ ret
+}
+)
+```
+
+
+```{r}
+document()
+rownames(expr) <- forceAbsoluteUniqueSample(as.character(dat[,'ID']))
+```
 
 
